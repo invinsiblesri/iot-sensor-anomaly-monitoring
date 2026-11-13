@@ -1,0 +1,32 @@
+{
+  "name": "iot-sensor-anomaly-monitoring-backend",
+  "version": "1.0.0",
+  "description": "Backend API and simulation engine for IoT Sensor Data Anomaly Monitoring System",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node ../database/seed.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "iot",
+    "anomaly-monitoring",
+    "mern",
+    "automata",
+    "dfa",
+    "regex"
+  ],
+  "author": "IT Student (Academic Year 2026-2027)",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
