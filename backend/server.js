@@ -1,22 +1,24 @@
 /**
- * IoT Sensor Data Anomaly Monitoring System - Express Server Bootstrap
+ * IoT Sensor Data Anomaly Monitoring System - Express Server
  * Academic Year 2026-2027 | Department Comprehensive Assessment Project
  */
 
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { connectDB, getDBStatus } = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
+// Connect to MongoDB
+connectDB();
+
 // Middleware Configuration
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (e.g. mobile apps, curl, postman)
     if (!origin) return callback(null, true);
-    // Allow development origins and configured CLIENT_URL
     const allowedOrigins = [
       CLIENT_URL,
       'http://localhost:5173',
@@ -44,18 +46,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// Phase 2 Baseline Health Check Endpoint
+// Real-Time Health & Diagnostic Check Endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ONLINE',
+  const dbStatus = getDBStatus();
+  const isHealthy = dbStatus.isConnected;
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'ONLINE' : 'DEGRADED',
     service: 'IoT Sensor Data Anomaly Monitoring Backend',
     academicYear: '2026-2027',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    database: {
-      status: 'PENDING_CONFIGURATION_PHASE_3',
-      message: 'MongoDB Atlas schemas and connection configured in Phase 3'
-    },
+    database: dbStatus,
     systemEnvironment: {
       nodeVersion: process.version,
       platform: process.platform,
