@@ -7,6 +7,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { connectDB, getDBStatus } = require('./config/db');
+const { networkTracker } = require('./middleware/networkTracker');
+const errorHandler = require('./middleware/errorHandler');
+const apiRoutes = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,7 +18,7 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 // Connect to MongoDB
 connectDB();
 
-// Middleware Configuration
+// CORS Middleware Configuration
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -36,15 +39,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request Logger Middleware (CN Diagnostic Tracker)
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`[HTTP] ${req.method} ${req.originalUrl} -> Status ${res.statusCode} (${duration}ms)`);
-  });
-  next();
-});
+// Computer Networks Diagnostic Tracker Middleware
+app.use(networkTracker);
 
 // Real-Time Health & Diagnostic Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -66,35 +62,39 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root Route
+// Mount Central API REST Routes
+app.use('/api', apiRoutes);
+
+// Root Gateway Info Route
 app.get('/', (req, res) => {
   res.status(200).json({
     message: 'IoT Sensor Data Anomaly Monitoring System API Gateway',
     documentation: '/api/docs',
-    healthCheck: '/api/health'
+    healthCheck: '/api/health',
+    endpoints: {
+      devices: '/api/devices',
+      sensors: '/api/sensors/readings',
+      alerts: '/api/alerts',
+      states: '/api/states',
+      settings: '/api/settings',
+      network: '/api/network/stats'
+    }
   });
 });
 
 // Central 404 Route Handler
 app.use((req, res) => {
   res.status(404).json({
-    error: 'Not Found',
-    message: `The requested endpoint ${req.method} ${req.originalUrl} does not exist on this server.`,
-    statusCode: 404
+    success: false,
+    statusCode: 404,
+    error: `Endpoint '${req.method} ${req.originalUrl}' does not exist on this server.`
   });
 });
 
 // Central Error Handler Middleware
-app.use((err, req, res, next) => {
-  console.error('[SERVER ERROR]', err);
-  res.status(err.status || 500).json({
-    error: err.name || 'InternalServerError',
-    message: err.message || 'An unexpected server error occurred.',
-    statusCode: err.status || 500
-  });
-});
+app.use(errorHandler);
 
-// Start Server Listener (only when executed directly, not when imported by test harnesses)
+// Start Server Listener
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`====================================================`);
