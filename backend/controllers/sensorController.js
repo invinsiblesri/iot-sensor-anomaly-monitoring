@@ -4,12 +4,9 @@
  */
 
 const { SensorReading, Device } = require('../models');
+const { processSensorMessage } = require('../services/sensorProcessingService');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 
-/**
- * Retrieve paginated sensor readings with multi-parameter filtering
- * GET /api/sensors/readings
- */
 const getReadings = async (req, res, next) => {
   try {
     const {
@@ -73,10 +70,6 @@ const getReadings = async (req, res, next) => {
   }
 };
 
-/**
- * Retrieve the single most recent reading for each registered device
- * GET /api/sensors/readings/latest
- */
 const getLatestReadings = async (req, res, next) => {
   try {
     const latestReadings = await SensorReading.aggregate([
@@ -97,10 +90,6 @@ const getLatestReadings = async (req, res, next) => {
   }
 };
 
-/**
- * Retrieve sensor readings for a specific device ID
- * GET /api/sensors/readings/:deviceId
- */
 const getReadingsByDeviceId = async (req, res, next) => {
   try {
     const { deviceId } = req.params;
@@ -124,51 +113,35 @@ const getReadingsByDeviceId = async (req, res, next) => {
 };
 
 /**
- * Manual or HTTP-based sensor reading submission endpoint
+ * Sensor reading ingestion endpoint
+ * Validates wire format via FLAT Regex and executes DFA transition
  * POST /api/sensors/readings
  */
 const postReading = async (req, res, next) => {
   try {
-    const { deviceId, temperature, humidity, pressure, timestamp, rawMessage } = req.body;
+    let rawFrame = req.body.rawMessage;
 
-    if (!deviceId || temperature === undefined || humidity === undefined || pressure === undefined) {
-      return sendError(res, 'deviceId, temperature, humidity, and pressure are required', 400);
-    }
-
-    const readingTime = timestamp ? new Date(timestamp) : new Date();
-    const formattedRaw = rawMessage || `${deviceId}|TEMP=${temperature}|HUM=${humidity}|PRESS=${pressure}|TS=${readingTime.toISOString()}`;
-
-    // Basic range classification (will be augmented by FLAT DFA in Phase 6)
-    let stateAtReading = 'NORMAL';
-    if (temperature > 40 || temperature < 5 || humidity > 80 || humidity < 15 || pressure > 1050 || pressure < 950) {
-      stateAtReading = 'FAULTY';
-    } else if (temperature > 30 || temperature < 18 || humidity > 60 || humidity < 30 || pressure > 1030 || pressure < 980) {
-      stateAtReading = 'WARNING';
-    }
-
-    const reading = await SensorReading.create({
-      deviceId: deviceId.toUpperCase(),
-      temperature: Number(temperature),
-      humidity: Number(humidity),
-      pressure: Number(pressure),
-      timestamp: readingTime,
-      stateAtReading,
-      rawMessage: formattedRaw,
-      validationStatus: 'ACCEPTED'
-    });
-
-    // Update Device lastSeen and currentState
-    await Device.findOneAndUpdate(
-      { deviceId: deviceId.toUpperCase() },
-      { 
-        $set: { 
-          lastSeen: readingTime,
-          currentState: stateAtReading 
-        } 
+    if (!rawFrame) {
+      const { deviceId, temperature, humidity, pressure, timestamp } = req.body;
+      if (!deviceId || temperature === undefined || humidity === undefined || pressure === undefined) {
+        return sendError(res, 'Must provide either rawMessage string or deviceId, temperature, humidity, and pressure', 400);
       }
-    );
+      const ts = timestamp ? new Date(timestamp).toISOString() : new Date().toISOString();
+      rawFrame = `${deviceId.toUpperCase()}|TEMP=${temperature}|HUM=${humidity}|PRESS=${pressure}|TS=${ts}`;
+    }
 
-    return sendSuccess(res, reading, 201, 'Sensor reading recorded successfully');
+    const result = await processSensorMessage(rawFrame);
+
+    if (!result.success) {
+      return sendError(
+        res,
+        `Sensor message rejected by formal grammar: ${result.errorReason}`,
+        400,
+        { validationStatus: 'REJECTED', rawMessage: rawFrame, reason: result.errorReason }
+      );
+    }
+
+    return sendSuccess(res, result, 201, 'Sensor reading accepted and processed by DFA');
   } catch (error) {
     next(error);
   }
