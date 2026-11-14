@@ -75,13 +75,13 @@ export const NetworkMonitor = () => {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>DATABASE CLUSTER</span>
-            <Database size={18} style={{ color: db?.isConnected ? 'var(--state-normal)' : 'var(--state-warning)' }} />
+            <Database size={18} style={{ color: db?.isConnected ? 'var(--state-normal)' : (!isBackendOnline ? 'var(--state-faulty)' : 'var(--state-warning)') }} />
           </div>
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: db?.isConnected ? 'var(--state-normal)' : 'var(--state-warning)', marginTop: '0.35rem' }}>
-            {db?.status || 'CONNECTING'}
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: db?.isConnected ? 'var(--state-normal)' : (!isBackendOnline ? 'var(--state-faulty)' : 'var(--state-warning)'), marginTop: '0.35rem' }}>
+            {isBackendOnline ? (db?.status || 'CONNECTING') : 'UNREACHABLE'}
           </p>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-            {db?.host ? `${db.host}` : 'MongoDB Cluster'}
+            {isBackendOnline ? (db?.host ? `${db.host}` : 'MongoDB Cluster') : 'Start backend to view DB state'}
           </span>
         </div>
 
