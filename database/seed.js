@@ -4,8 +4,9 @@
  */
 
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
-const mongoose = require('mongoose');
+const backendModules = path.join(__dirname, '../backend/node_modules');
+require(path.join(backendModules, 'dotenv')).config({ path: path.join(__dirname, '../backend/.env') });
+const mongoose = require(path.join(backendModules, 'mongoose'));
 const { Device, SystemSettings, SensorReading, Alert, StateTransition } = require('../backend/models');
 
 const initialDevices = [
