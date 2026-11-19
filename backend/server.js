@@ -19,21 +19,13 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 connectDB();
 
 // CORS Middleware Configuration
+// origin: true dynamically reflects the requesting origin (Vercel, localhost, etc.)
+// ensuring seamless communication across all client deployments
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    const allowedOrigins = [
-      CLIENT_URL,
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173'
-    ];
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-    return callback(new Error('CORS policy violation: Origin not allowed'));
-  },
-  credentials: true
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(express.json());
