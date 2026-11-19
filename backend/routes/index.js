@@ -26,4 +26,26 @@ router.use('/validator', validatorRoutes);
 router.use('/automata', automataRoutes);
 router.use('/simulation', simulationRoutes);
 
+// Root /api endpoint gateway index
+router.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'IoT Sensor Data Anomaly Monitoring System REST API Gateway',
+    status: 'ONLINE',
+    academicYear: '2026-2027',
+    endpoints: {
+      health: '/api/health',
+      devices: '/api/devices',
+      sensors: '/api/sensors/readings',
+      alerts: '/api/alerts',
+      states: '/api/states',
+      settings: '/api/settings',
+      network: '/api/network/stats',
+      validator: '/api/validator/test',
+      automata: '/api/automata/definition',
+      simulation: '/api/simulation/status'
+    }
+  });
+});
+
 module.exports = router;
